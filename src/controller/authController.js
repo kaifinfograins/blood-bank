@@ -61,7 +61,7 @@ function checkUserVarification(userData) {
   }
 }
 
-async function sendPasswordResetEmail(saveData, valid) {
+async function emailService(saveData, valid) {
   console.log(saveData);
   const storeEmailResponse = await emailContact.SENDMAIL(saveData, valid);
   return storeEmailResponse;
@@ -156,13 +156,13 @@ const createRegisterAuth = async (req, res) => {
     }
 
     let createRegister = ''
-    if (role === 'buyer') {
-      const buyerDetail = await authModelSchema.findOne({ role, email });
-      console.log(buyerDetail);
-      if(buyerDetail){
-      const checkUserDetails = await checkUserVarification(buyerDetail)
+    if (role === 'visitor') {
+      const visitorDetail = await authModelSchema.findOne({ role, email });
+      console.log(visitorDetail);
+      if(visitorDetail){
+      const checkUserDetails = await checkUserVarification(visitorDetail)
       if (checkUserDetails.status === true) {
-        await deleteUser(buyerDetail._id);
+        await deleteUser(visitorDetail._id);
        }else{
        return res.status(409).json({ status: 409, message:checkUserDetails.message });
        }
@@ -170,36 +170,25 @@ const createRegisterAuth = async (req, res) => {
 
       createRegister = await storeDetails(first_Name, last_Name, email, is_varified, password, role,phoneNumber);
 
-    } else if (role === "supplier") {
-      const supplierDetails = await authModelSchema.findOne({ role,email});
-      if(supplierDetails){
-      const checkUserDetails = await checkUserVarification(supplierDetails)
+    } else if (role === "doner") {
+      const donerDetail = await authModelSchema.findOne({ role,email});
+      if(donerDetail){
+      const checkUserDetails = await checkUserVarification(donerDetail)
       if (checkUserDetails.status === true) {
-       await deleteUser(supplierDetails._id);
+       await deleteUser(donerDetail._id);
       }else{
       return res.status(409).json({ status: 409, message:checkUserDetails.message });
       }
     }
     createRegister = await storeDetails(first_Name, last_Name, email, is_varified, password, role,phoneNumber);
 
-    } else if (role === "investor") {
-      const investorDetails = await authModelSchema.findOne({ role, email });
-       if(investorDetails){
-        const checkUserDetails = await checkUserVarification(investorDetails)
-      if (checkUserDetails.status === true) {
-       await deleteUser(investorDetails._id);
-      }else{
-      return res.status(409).json({ status: 409, message:checkUserDetails.message });
-      }
     }
-
-      createRegister = await storeDetails(first_Name, last_Name, email, is_varified, password, role,phoneNumber);
-    }
+  
 
     const result = await createRegister.save()
 
     if (result) {
-      const emailresponse = await sendPasswordResetEmail(result, 'signup');
+      const emailresponse = await emailService(result, 'signup');
       
       sgMail.setApiKey(process.env.SENDGRID_KEY);
       sgMail.send(emailresponse)
@@ -281,7 +270,7 @@ const resetOTP = async (req, res) => {
         const updateInformation = await authModelSchema.findOne({ _id: id })
       if (updateInfo) {
 
-        const emailresponse = await sendPasswordResetEmail(updateInformation, 'signup');
+        const emailresponse = await emailService(updateInformation, 'signup');
 
         sgMail.setApiKey(process.env.SENDGRID_KEY);
         sgMail.send(emailresponse)
@@ -349,18 +338,18 @@ const authLogin = async (req, res) => {
 
     let token = '';
     let userDetail = {};
-    if (role === 'investor') {
-      const investor = await authModelSchema.findOne({ role, email });
+    if (role === 'visitor') {
+      const visitor = await authModelSchema.findOne({ role, email });
       
-      if (!investor) {
+      if (!visitor) {
         return res.status(409).json({
           status: 409,
           message: "Your credentials is not found ! Please check your email or role",
         })
       }
-      const checkvarification =  checkStatus(investor);
+      const checkvarification =  checkStatus(visitor);
       if(checkvarification.status){
-      const isPasswordCheck = await validatePassword(password, investor.password);
+      const isPasswordCheck = await validatePassword(password, visitor.password);
       if (!isPasswordCheck) {
         return res.status(422).json({
           status: 422,
@@ -369,18 +358,18 @@ const authLogin = async (req, res) => {
       }
 
       token = await encode({
-        id: investor,
+        id: visitor,
       });
       userDetail = {
-        first_Name: investor.first_Name,
-        last_Name: investor.last_Name,
-        email: investor.email,
-        role: investor.role,
-        is_varified: investor.is_varified,
-        _id: investor._id,
-        createdAt: investor.createdAt,
-        updateAt: investor.updateAt,
-        phoneNumber:investor.phoneNumber,
+        first_Name: visitor.first_Name,
+        last_Name: visitor.last_Name,
+        email: visitor.email,
+        role: visitor.role,
+        is_varified: visitor.is_varified,
+        _id: visitor._id,
+        createdAt: visitor.createdAt,
+        updateAt: visitor.updateAt,
+        phoneNumber:visitor.phoneNumber,
       }
     }else{
       return res.status(412).json({
@@ -389,18 +378,18 @@ const authLogin = async (req, res) => {
       });
     }
 
-    } else if (role === 'supplier') {
-      const supplier = await authModelSchema.findOne({ role, email });
+    } else if (role === 'doner') {
+      const doner = await authModelSchema.findOne({ role, email });
 
-      if (!supplier) {
+      if (!doner) {
         return res.status(409).json({
           status: 409,
           message: "Your credentials is not found ! Please check your email or role",
         })
       }
-      const checkvarification = await checkStatus(supplier);
+      const checkvarification = await checkStatus(doner);
       if(checkvarification.status){
-      const isPasswordcheckAdmin = await validatePassword(password, supplier.password);
+      const isPasswordcheckAdmin = await validatePassword(password, doner.password);
       if (!isPasswordcheckAdmin) {
         return res.status(422).json({
           status: 422,
@@ -409,18 +398,18 @@ const authLogin = async (req, res) => {
       }
 
       token = await encode({
-        id: supplier,
+        id: doner,
       });
       userDetail = {
-        _id: supplier._id,
-        first_Name: supplier.first_Name,
-        last_Name: supplier.last_Name,
-        email: supplier.email,
-        role: supplier.role,
-        is_varified: supplier.is_varified,
-        createdAt: supplier.createdAt,
-        updateAt: supplier.updateAt,
-        phoneNumber:supplier.phoneNumber,
+        _id: doner._id,
+        first_Name: doner.first_Name,
+        last_Name: doner.last_Name,
+        email: doner.email,
+        role: doner.role,
+        is_varified: doner.is_varified,
+        createdAt: doner.createdAt,
+        updateAt: doner.updateAt,
+        phoneNumber:doner.phoneNumber,
       }
     }else{
       return res.status(412).json({
@@ -428,49 +417,9 @@ const authLogin = async (req, res) => {
         message: checkvarification.message,
       });
     }
-    } else if (role === 'buyer') {
-      const buyer = await authModelSchema.findOne({ role, email });
-
-      if (!buyer) {
-        return res.status(409).json({
-          status: 409,
-          message: "Your credentials is not found ! Please check your email or role",
-        })
-      }
-
-      const checkvarification =  checkStatus(buyer);
-      if(checkvarification.status){
-      const isPasswordCheck = await validatePassword(password, buyer.password);
-      if (!isPasswordCheck) {
-        return res.status(422).json({
-          status: 422,
-          message: message.PASSWORD_NOT_MATCH,
-        });
-      }
-
-      token = await encode({
-        id: buyer,
-      });
-
-      userDetail = {
-        _id: buyer._id,
-        first_Name: buyer.first_Name,
-        last_Name: buyer.last_Name,
-        email: buyer.email,
-        role: buyer.role,
-        is_varified: buyer.is_varified,
-        createdAt: buyer.createdAt,
-        updateAt: buyer.updateAt,
-        phoneNumber:buyer.phoneNumber,
-      }
-    }else{
-      return res.status(412).json({
-        status: 412,
-        message: checkvarification.message,
-      });
-    }
-
-    } else if (role === 'admin') {
+    } 
+   
+    else if (role === 'admin') {
       const admin = await authModelSchema.findOne({ role, email });
 
       if (!admin) {
@@ -552,7 +501,7 @@ const forgotPassword = async (req, res) => {
     }
     
     let user ='';
-    if (role === 'buyer') {
+    if (role === 'doner') {
        user = await authModelSchema.findOne({role, email });
 
       if (!user) {
@@ -573,7 +522,7 @@ const forgotPassword = async (req, res) => {
       }
     }
 
-    if (role === 'supplier') {
+    if (role === 'visitor') {
        user = await authModelSchema.findOne({role, email });
 
       if (!user) {
@@ -594,19 +543,6 @@ const forgotPassword = async (req, res) => {
     }
     }
 
-    if (role === 'investor') {
-     user = await authModelSchema.findOne({role, email });
-
-      if (!user) {
-        // Handle the case when the email does not exist in the database
-        return res.status(409).json({ message: 'your credentials is not found ! Please check your email or role' });
-      }
-      
-      const resetToken = generateResetToken();
-      user.resetToken = resetToken;
-      user.resetTokenExpiration = Date.now() + 3600000;
-    }
-
     if (role === 'admin') {
       user = await authModelSchema.findOne({role, email });
 
@@ -622,7 +558,7 @@ const forgotPassword = async (req, res) => {
     const saveData = await user.save();
 
     if (saveData) {
-      const emailresponse = await sendPasswordResetEmail(saveData, false);
+      const emailresponse = await emailService(saveData, false);
 
       sgMail.setApiKey(process.env.SENDGRID_KEY);
       sgMail.send(emailresponse)
@@ -711,7 +647,7 @@ const resetPassword = async (req, res) => {
 
 //     const result = await subscribe.save()
 //     if (result) {
-//       const emailresponse = await sendPasswordResetEmail(result, 'subscribe');
+//       const emailresponse = await emailService(result, 'subscribe');
 
 //       sgMail.setApiKey(process.env.SENDGRID_KEY);
 //       sgMail.send(emailresponse)
